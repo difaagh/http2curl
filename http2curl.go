@@ -3,7 +3,7 @@ package http2curl
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -59,10 +59,14 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 			return nil, fmt.Errorf("getCurlCommand: buffer read from body error: %w", err)
 		}
 		// reset body for potential re-reads
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(buff.Bytes()))
+		req.Body = io.NopCloser(bytes.NewBuffer(buff.Bytes()))
 		if len(buff.String()) > 0 {
-			bodyEscaped := bashEscape(buff.String())
-			command.append("-d", bodyEscaped)
+			// check wether the buffer.String() is json
+			buffString := buff.String()
+			if buffString[0] == '{' && buffString[len(buffString)-1] == '}' {
+				bodyEscaped := bashEscape(buffString)
+				command.append("-d", bodyEscaped)
+			}
 		}
 	}
 
